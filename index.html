@@ -206,6 +206,38 @@
             .scroll-arrow, .scroll-arrow-double { width: 26px; height: 26px; font-size: 11px; }
         }
 
+
+        /* ---------- Link mini viewer (copied from the Umrah Essentials page's PDF mini viewer) ---------- */
+        .pdf-player { position: fixed; right: 56px; bottom: 20px; width: 420px; max-width: calc(100vw - 24px); background: #fff; border: 1px solid var(--verse-border); border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.3); z-index: 1200; overflow: hidden; display: flex; flex-direction: column; }
+        .pdf-player.hidden { display: none !important; }
+        .pdf-bar { display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px; background: #2c3e50; color: #fff; font-size: 14px; font-weight: bold; }
+        .pdf-bar .pdf-title { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pdf-bar button, .pdf-bar a { border: none; background: rgba(255,255,255,0.12); color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; text-decoration: none; }
+        .pdf-bar button:hover, .pdf-bar a:hover { background: rgba(255,255,255,0.25); }
+        .pdf-bar button:focus-visible, .pdf-bar a:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+        .pdf-body { position: relative; height: min(62vh, 500px); background: #525659; }
+        .pdf-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #fff; }
+        .pdf-note { font-size: 11.5px; line-height: 1.4; padding: 5px 12px; background: #f0f4f8; color: #2c3e50; }
+        .pdf-note a { color: #1e5f8e; font-weight: bold; }
+        .pdf-player.large { left: 5vw; right: 5vw; top: 5vh; bottom: 5vh; width: auto; max-width: none; }
+        .pdf-player.large .pdf-body { height: auto; flex: 1; }
+        .pdf-player.minimized { width: 220px; }
+        .pdf-player.minimized .pdf-body, .pdf-player.minimized .pdf-note { display: none; }
+        @media (max-width: 640px) {
+            .pdf-player { left: 16px; right: 16px; bottom: 14px; width: auto; }
+            .pdf-body { height: 56vh; }
+            .pdf-player.minimized { left: auto; width: 200px; }
+            .pdf-player.large { left: 0; right: 0; top: 0; bottom: 0; border-radius: 0; }
+        }
+        @media print { .pdf-player { display: none !important; } }
+        /* Close button: bright yellow, blinking, shows "JZK" (JazakAllahu khayran) */
+        @keyframes x-yellow-blink { 0%, 100% { opacity: 1; box-shadow: 0 0 0 3px rgba(255,230,0,0.6); } 50% { opacity: 0.35; box-shadow: 0 0 0 0 rgba(255,230,0,0); } }
+        #pdfClose { background: #FFE600 !important; color: #111 !important; border: none !important; animation: x-yellow-blink 1s ease-in-out infinite !important; width: auto !important; min-width: 34px; padding: 0 8px !important; border-radius: 30px !important; font: 800 11px/1 system-ui, -apple-system, "Segoe UI", Arial, sans-serif !important; letter-spacing: 0.5px; white-space: nowrap; }
+        #pdfClose svg { display: none !important; }
+        #pdfClose::after { content: "JZK"; }
+        #pdfClose:hover, #pdfClose:focus-visible { animation: none !important; opacity: 1; background: #FFF176 !important; }
+        @media (prefers-reduced-motion: reduce) { #pdfClose { animation: none !important; } }
+
         /* HCI logo hidden (remove these two lines to show it again) */
         .hci-badge { display: none !important; }
         .pill-hci { display: none !important; }
@@ -231,6 +263,20 @@
     <div id="scrollDown" class="scroll-arrow down" role="button" tabindex="0" aria-label="Next slide" title="Next slide"><i class="fas fa-chevron-down"></i></div>
     <div id="doubleUpScroll" class="scroll-arrow-double up-double" role="button" tabindex="0" aria-label="First slide" title="First slide"><i class="fas fa-angles-up"></i></div>
     <div id="doubleDownScroll" class="scroll-arrow-double down-double" role="button" tabindex="0" aria-label="Last slide" title="Last slide"><i class="fas fa-angles-down"></i></div>
+
+
+    <!-- Link mini viewer (opens source links in a small window on the page) -->
+    <div class="pdf-player hidden" id="pdfPlayer" role="dialog" aria-label="Source">
+        <div class="pdf-bar">
+            <span class="pdf-title" id="pdfTitle">Source</span>
+            <a id="pdfOut" href="#" target="_blank" rel="noopener" title="Open in a new tab" aria-label="Open in a new tab"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+            <button type="button" id="pdfSize" title="Enlarge" aria-label="Enlarge"></button>
+            <button type="button" id="pdfMin" title="Minimize" aria-label="Minimize"></button>
+            <button type="button" id="pdfClose" title="Close" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></button>
+        </div>
+        <div class="pdf-body" id="pdfBody"></div>
+        <div class="pdf-note" id="pdfNote"></div>
+    </div>
 
     <div class="deck">
         <div class="bismillah">﷽</div>
@@ -705,24 +751,77 @@
             const nav = { scrollUp: () => go(current() - 1), scrollDown: () => go(current() + 1), doubleUpScroll: () => window.scrollTo({ top: 0, behavior: 'smooth' }), doubleDownScroll: () => go(slides().length - 1) };
             Object.entries(nav).forEach(([id, fn]) => { const el = document.getElementById(id); el.addEventListener('click', fn); el.addEventListener('keydown', onKey(fn)); });
             document.addEventListener('keydown', e => {
-                if (e.altKey || e.ctrlKey || e.metaKey || /input|textarea|select/i.test(e.target.tagName)) return;
+                if (e.altKey || e.ctrlKey || e.metaKey || /input|textarea|select/i.test(e.target.tagName) || e.target.closest('#pdfPlayer')) return;
                 if (['ArrowRight', 'ArrowDown', 'PageDown'].includes(e.key)) { e.preventDefault(); nav.scrollDown(); }
                 else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(e.key)) { e.preventDefault(); nav.scrollUp(); }
                 else if (e.key === 'Home') { e.preventDefault(); nav.doubleUpScroll(); }
                 else if (e.key === 'End') { e.preventDefault(); nav.doubleDownScroll(); }
             });
 
-            /* Links open in a small pop-up window, not a new tab (same as the Umrah Essentials page).
-               If the browser blocks pop-ups, the link opens normally instead. */
-            document.querySelectorAll('a[href^="http"]').forEach(link => {
-                link.addEventListener('click', e => {
-                    const sw = screen.availWidth || 1200, sh = screen.availHeight || 800;
-                    const w = Math.min(900, sw - 40), h = Math.min(820, sh - 60);
-                    const l = Math.max(0, sw - w - 30), t = Math.max(0, (sh - h) / 2);
-                    const win = window.open(link.href, 'yarmoukSource', `popup=yes,width=${w},height=${h},left=${l},top=${t}`);
-                    if (win) { e.preventDefault(); win.focus(); }
+            /* ---------- Link mini viewer (same as the PDF mini viewer on the Umrah Essentials page) ----------
+               Links open in a small window on the page, not in a new tab. Some sites refuse to be shown
+               inside another page; for those, the ↗ button (and the note under the window) opens them in a tab. */
+            (function () {
+                const box = document.getElementById('pdfPlayer');
+                const body = document.getElementById('pdfBody');
+                const ttl = document.getElementById('pdfTitle');
+                const out = document.getElementById('pdfOut');
+                const note = document.getElementById('pdfNote');
+                const sizeBtn = document.getElementById('pdfSize');
+                const minBtn = document.getElementById('pdfMin');
+                const closeBtn = document.getElementById('pdfClose');
+                const ICON = {
+                    grow: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+                    shrink: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+                    min: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+                    restore: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 15l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+                };
+                const previewUrl = href => {
+                    const m = href.match(/\/file\/d\/([^/?]+)/);
+                    if (m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+                    const f = href.match(/\/drive\/folders\/([^/?]+)/);
+                    if (f) return `https://drive.google.com/embeddedfolderview?id=${f[1]}#grid`;
+                    if (/\.pdf($|[?#])/i.test(href)) return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(href);
+                    return href;
+                };
+                function labels() {
+                    const id = isId();
+                    const large = box.classList.contains('large'), min = box.classList.contains('minimized');
+                    const t1 = large ? (id ? 'Jendela kecil' : 'Smaller window') : (id ? 'Perbesar' : 'Enlarge');
+                    sizeBtn.innerHTML = large ? ICON.shrink : ICON.grow; sizeBtn.title = t1; sizeBtn.setAttribute('aria-label', t1);
+                    const t2 = min ? (id ? 'Tampilkan' : 'Show') : (id ? 'Perkecil' : 'Minimize');
+                    minBtn.innerHTML = min ? ICON.restore : ICON.min; minBtn.title = t2; minBtn.setAttribute('aria-label', t2);
+                    const t3 = id ? 'Tutup' : 'Close'; closeBtn.title = t3; closeBtn.setAttribute('aria-label', t3);
+                    const t4 = id ? 'Buka di tab baru' : 'Open in a new tab'; out.title = t4; out.setAttribute('aria-label', t4);
+                    note.innerHTML = (id ? 'Halaman kosong? Beberapa situs tidak bisa ditampilkan di sini. ' : 'Page blank? Some sites can’t be shown here. ') +
+                                     '<a href="' + out.href + '" target="_blank" rel="noopener">' + (id ? 'Buka di tab baru ↗' : 'Open it in a new tab ↗') + '</a>';
+                }
+                function open(link) {
+                    const src = previewUrl(link.href);
+                    const frame = body.querySelector('iframe');
+                    if (!frame || frame.dataset.src !== src) {
+                        body.innerHTML = '';
+                        const f = document.createElement('iframe');
+                        f.src = src; f.dataset.src = src; f.title = link.textContent.trim(); f.allowFullscreen = true;
+                        f.referrerPolicy = 'no-referrer-when-downgrade';
+                        body.appendChild(f);
+                    }
+                    ttl.textContent = link.dataset.viewerTitle || link.textContent.trim();
+                    out.href = link.href;
+                    box.classList.remove('hidden', 'minimized');
+                    labels();
+                    closeBtn.focus();
+                }
+                document.querySelectorAll('a[href^="http"]').forEach(link => {
+                    link.addEventListener('click', e => { e.preventDefault(); open(link); });
                 });
-            });
+                sizeBtn.addEventListener('click', () => { box.classList.remove('minimized'); box.classList.toggle('large'); labels(); });
+                minBtn.addEventListener('click', () => { box.classList.remove('large'); box.classList.toggle('minimized'); labels(); });
+                closeBtn.addEventListener('click', () => { body.innerHTML = ''; box.classList.add('hidden'); box.classList.remove('minimized', 'large'); });
+                document.addEventListener('keydown', e => { if (e.key === 'Escape' && !box.classList.contains('hidden')) closeBtn.click(); });
+                langToggle.addEventListener('click', () => setTimeout(labels, 0));
+                labels();
+            })();
 
             /* Save as PDF (browser print dialog): one slide per landscape page */
             document.querySelectorAll('.pdf-btn').forEach(btn => btn.addEventListener('click', e => { e.preventDefault(); window.print(); }));
